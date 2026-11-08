@@ -1,0 +1,51 @@
+--- a/ingest.py
++++ b/ingest.py
+@@ -12,6 +12,7 @@
+ import os
+ import re
+ import shutil
++import sqlite3
+ import sys
+ import time
+ import urllib.error
+@@ -290,11 +291,23 @@
+     print(f"telegram-media-ingest started bot_id={me.get('id')} root={cfg.root}", flush=True)
+     offset = load_offset(cfg.root)
+
++    # Opt-in only. One existing getUpdates consumer owns this bot token.
++    location_hook = None
++    if os.environ.get("HARU_LOCATION_EVENTS_ENABLED", "0") != "0":
++        from haru_life_events.telegram_media_hook import build_hook_from_config
++        location_hook = build_hook_from_config(
++            owner_id=cfg.allowed_user_id,
++            root=cfg.root,
++            env=os.environ,
++        )
++
+     while True:
+         payload: dict[str, Any] = {
+             "timeout": cfg.poll_timeout,
+             "limit": 10,
+-            "allowed_updates": json.dumps(["message"]),
++            "allowed_updates": json.dumps(
++                ["message", "edited_message"] if location_hook else ["message"]
++            ),
+         }
+         if offset is not None:
+             payload["offset"] = offset
+@@ -302,6 +315,15 @@
+             updates = tg.call("getUpdates", payload, timeout=cfg.poll_timeout + 15)
+             for update in updates:
+                 update_id = int(update["update_id"])
++                if location_hook is not None:
++                    try:
++                        # Enqueue only coarse location metadata, never raw GPS.
++                        location_hook.observe_update(
++                            update, now=datetime.now(timezone.utc)
++                        )
++                    except (ValueError, sqlite3.Error):
++                        # Media/photo handling must not fail due to location.
++                        print("location hook rejected update", file=sys.stderr, flush=True)
+                 message = update.get("message")
+                 if message:
+                     chat_id = (message.get("chat") or {}).get("id")

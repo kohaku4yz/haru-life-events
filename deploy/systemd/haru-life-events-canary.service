@@ -1,0 +1,32 @@
+[Unit]
+Description=Haru Life Events - Events MCP backend + private Tunnel (no event producers)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=8
+
+[Service]
+Type=simple
+User=haru
+Group=haru
+WorkingDirectory=/opt/haru-life-events
+Environment=HOME=/var/lib/haru-life-events
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/haru-life-events/.venv/bin/python scripts/owner_tunnel_canary.py
+Restart=always
+RestartSec=8
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/haru-life-events/.local/share/haru-life-events
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="description" content="Haru Life Events：基于 MCP Events 的生活感知。地点移动或身体状态变化（开始走路、醒来、心率变化）时，用一个 life.context.changed 事件叫醒你的 AI。" />
+<title>Haru Life Events — 部署指南</title>
+<style>
+:root{
+  color-scheme:light;
+  --text:#37352f;
+  --muted:#787774;
+  --faint:#9b9a97;
+  --border:rgba(55,53,47,.16);
+  --code-bg:#f7f6f3;
+  --callout-bg:#f1f1ef;
+  --inline-bg:rgba(135,131,120,.15);
+  --link:#2f76b7;
+  --cover:#f2f4ee;
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+.topline{height:46px;display:flex;align-items:center;padding:0 18px;position:relative;z-index:3;font-size:13px;color:var(--muted)}
+.topline a{color:inherit;text-decoration:none}.topline a:hover{text-decoration:underline}
+.topline .sep{margin:0 7px;color:#b8b6b1}
+.topline .lang-switch{margin-left:auto;display:inline-flex;align-items:center;gap:3px;padding:2px;border-radius:6px}
+.lang-switch button{border:0;background:transparent;color:var(--muted);font:12px var(--sans);padding:4px 7px;border-radius:5px;cursor:pointer}
+.lang-switch button:hover{background:var(--code-bg);color:var(--text)}
+.lang-switch button.active{background:var(--code-bg);color:var(--text);font-weight:600}
+[data-lang-only="en"]{display:none!important}
+html[data-ui-lang="en"] [data-lang-only="zh"]{display:none!important}
+html[data-ui-lang="en"] [data-lang-only="en"]{display:revert!important}
+.cover{display:none}
+.page{width:min(708px,calc(100% - 48px));margin:0 auto;padding:0 0 120px}
+.page-header{margin:54px 0 46px;position:relative;z-index:2}
+.page-icon{width:104px;height:122px;margin:0 0 22px;display:flex;align-items:flex-end}
+.page-icon img{display:block;width:auto;height:118px;max-width:104px;object-fit:contain}
+h1{margin:0 0 18px;font-size:clamp(2.45rem,7vw,3rem);font-weight:700;letter-spacing:-.035em;line-height:1.2}
+.subtitle{margin:0;padding-left:14px;border-left:3px solid var(--text);color:var(--text);font-weight:600}
+.lede{margin-top:26px}
+section{margin-top:42px;scroll-margin-top:28px}
+h2{margin:0 0 14px;font-size:1.52rem;font-weight:650;letter-spacing:-.018em;line-height:1.3}
+h3{margin:28px 0 10px;font-size:1.08rem;font-weight:650;line-height:1.35}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:1.55em}li{margin:3px 0}strong{font-weight:650}
+code{font-family:var(--mono);font-size:.86em}
+p code,li code{padding:.12em .3em;border-radius:3px;background:var(--inline-bg);color:#eb5757}
+.code-wrap{position:relative;margin:14px 0}
+pre{margin:0;padding:18px 20px;overflow-x:auto;border-radius:3px;background:var(--code-bg);color:var(--text);font-family:var(--mono);font-size:.84rem;line-height:1.55;tab-size:2;white-space:pre}
+pre code{color:inherit;background:transparent;font-size:inherit}
+.copy{position:absolute;top:8px;right:8px;border:0;border-radius:4px;background:rgba(255,255,255,.88);color:var(--muted);font:12px var(--sans);padding:5px 8px;cursor:pointer;opacity:0;transition:opacity .12s ease,background .12s ease}
+.code-wrap:hover .copy,.copy:focus-visible{opacity:1}.copy:hover{background:#fff}
+.callout{margin:16px 0;padding:16px 18px;border-radius:3px;background:var(--callout-bg);display:grid;grid-template-columns:24px 1fr;gap:10px}.callout .icon{line-height:1.55}
+.architecture{margin:26px 0 0}.architecture figcaption{margin-top:7px;color:var(--muted);font-size:.82rem;text-align:left}
+.guide-shot{display:block;width:100%;height:auto;margin:18px 0 22px;border:1px solid var(--border);border-radius:8px}.guide-shot.tall{max-width:560px}
+.checklist{list-style:none;padding-left:0}.checklist li{display:grid;grid-template-columns:18px 1fr;gap:9px;margin:7px 0}.box{width:15px;height:15px;margin-top:5px;border:1.5px solid #9b9a97;border-radius:2px;background:#fff}
+.resources{padding-left:1.35em}.resources li{margin:6px 0}.references{overflow-wrap:anywhere}
+footer{margin-top:52px;color:var(--muted);font-size:.82rem}
+
+/* floating table of contents */
+.toc-dock{position:fixed;z-index:20;top:94px;right:18px;display:flex;align-items:flex-start;outline:none}
+.toc-rail{width:46px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:10px;border-radius:8px;cursor:default}
+.toc-rail a{width:30px;height:4px;border-radius:99px;background:#e5e4e1;text-decoration:none;transition:background .12s ease,transform .12s ease}
+.toc-rail a:hover{background:#bab8b3}.toc-rail a.active{background:#37352f}
+.toc-panel{position:absolute;right:50px;top:0;width:236px;padding:18px 20px;border:1px solid rgba(55,53,47,.13);border-radius:18px;background:rgba(255,255,255,.98);box-shadow:0 16px 42px rgba(15,15,15,.10),0 1px 2px rgba(15,15,15,.05);opacity:0;transform:translateX(8px) scale(.985);transform-origin:top right;pointer-events:none;transition:opacity .14s ease,transform .14s ease}
+.toc-dock:hover .toc-panel,.toc-dock:focus-within .toc-panel{opacity:1;transform:none;pointer-events:auto}
+.toc-panel a{display:block;padding:4px 0;color:#85827d;text-decoration:none;font-size:15px;line-height:1.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toc-panel a:hover{color:var(--text)}.toc-panel a.active{color:#4d82d8}
+
+@media(max-width:1040px){.toc-dock{display:none}}
+@media(max-width:600px){
+ body{font-size:15.5px}.topline{height:42px;padding:0 14px}.cover{height:116px}.page{width:min(100% - 32px,708px);padding-bottom:82px}.page-header{margin-top:34px;margin-bottom:38px}.page-icon{width:68px;height:80px;margin-bottom:18px}.page-icon img{height:78px;max-width:68px}section{margin-top:36px}pre{margin-inline:-4px;padding:15px 16px;font-size:.78rem}.copy{opacity:1}.architecture pre{font-size:.72rem}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+
+.emoji-icon{font-size:78px;line-height:1;align-items:flex-end}
+figure{margin:0}
+.phone-shot{margin:18px auto 6px;max-width:360px}
+.phone-shot img{display:block;width:100%;height:auto;border:1px solid var(--border);border-radius:18px}
+.phone-shot figcaption{margin-top:8px;color:var(--muted);font-size:.8rem;text-align:center}
+.table-wrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{border:1px solid var(--border);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:var(--code-bg);font-weight:600}
+td:first-child{white-space:nowrap}
+td code{font-size:.78rem;color:var(--text);background:none;padding:0;overflow-wrap:anywhere}
+</style>
+
+</head>
+<body>
+<nav class="topline" aria-label="Breadcrumb">
+  <a href="https://github.com/kohaku4yz/haru-life-events" target="_blank" rel="noreferrer">kohaku4yz/haru-life-events</a><span class="sep">/</span><span data-lang-only="zh">部署指南</span><span data-lang-only="en">Setup guide</span>
+  <div class="lang-switch" role="group" aria-label="Language">
+    <button type="button" data-lang-set="zh" aria-pressed="true">中文</button>
+    <button type="button" data-lang-set="en" aria-pressed="false">English</button>
+  </div>
+</nav>
+
+<aside class="toc-dock" aria-label="页面目录" tabindex="0">
+  <nav class="toc-rail" aria-label="目录快速导航">
+    <a href="#what" data-label-zh="主要功能" data-label-en="What it does"></a>
+    <a href="#events" data-label-zh="事件格式" data-label-en="Event contract"></a>
+    <a href="#location" data-label-zh="位置触发" data-label-en="Location trigger"></a>
+    <a href="#vitals" data-label-zh="身体状态检测" data-label-en="Vitals detection"></a>
+    <a href="#delivery" data-label-zh="投递与可靠性" data-label-en="Delivery &amp; reliability"></a>
+    <a href="#subscribe" data-label-zh="订阅 MCP Events" data-label-en="Subscribing to MCP Events"></a>
+    <a href="#example" data-label-zh="运行示例" data-label-en="Example run"></a>
+    <a href="#setup" data-label-zh="部署" data-label-en="Setup"></a>
+    <a href="#structure" data-label-zh="仓库结构" data-label-en="Repository structure"></a>
+    <a href="#story" data-label-zh="幕后小故事" data-label-en="Behind the scenes"></a>
+    <a href="#notes" data-label-zh="注意事项" data-label-en="Notes"></a>
+    <a href="#license" data-label-zh="许可证" data-label-en="License"></a>
+    <a href="#references" data-label-zh="参考" data-label-en="References"></a>
+  </nav>
+  <nav class="toc-panel" aria-label="页面目录展开">
+    <a href="#what" data-label-zh="主要功能" data-label-en="What it does">主要功能</a>
+    <a href="#events" data-label-zh="事件格式" data-label-en="Event contract">事件格式</a>
+    <a href="#location" data-label-zh="位置触发" data-label-en="Location trigger">位置触发</a>
+    <a href="#vitals" data-label-zh="身体状态检测" data-label-en="Vitals detection">身体状态检测</a>
+    <a href="#delivery" data-label-zh="投递与可靠性" data-label-en="Delivery &amp; reliability">投递与可靠性</a>
+    <a href="#subscribe" data-label-zh="订阅 MCP Events" data-label-en="Subscribing to MCP Events">订阅 MCP Events</a>
+    <a href="#example" data-label-zh="运行示例" data-label-en="Example run">运行示例</a>
+    <a href="#setup" data-label-zh="部署" data-label-en="Setup">部署</a>
+    <a href="#structure" data-label-zh="仓库结构" data-label-en="Repository structure">仓库结构</a>
+    <a href="#story" data-label-zh="幕后小故事" data-label-en="Behind the scenes">幕后小故事</a>
+    <a href="#notes" data-label-zh="注意事项" data-label-en="Notes">注意事项</a>
+    <a href="#license" data-label-zh="许可证" data-label-en="License">许可证</a>
+    <a href="#references" data-label-zh="参考" data-label-en="References">参考</a>
+  </nav>
+</aside>
+
+<main class="page">
+  <header class="page-header" id="overview">
+    <div class="page-icon emoji-icon" aria-hidden="true">🐾</div>
+    <h1>Haru Life Events</h1>
+    <blockquote class="subtitle" data-lang-only="zh">基于 MCP 2.0 MCP Events 的生活感知：当你的生活状态发生变化（地点移动、开始走路、醒来、心率变化）时，主动叫醒你的 AI。</blockquote>
+    <blockquote class="subtitle" data-lang-only="en">Life awareness on MCP Events (MCP 2.0): when your life context changes (you move somewhere, start walking, wake up, your heart rate changes), it wakes your AI up on its own.</blockquote>
+    <figure class="architecture">
+      <pre><code>Telegram live location               Apple Watch → PulsHealth app
+        │ your bot's poller + hook             │
+        ▼                                      ▼
+first share / ≥ 2 km                 pulse-relay v0.2 · Vitals extension
+→ fuzzy place label                            │ loopback outbox
+        │                                      ▼
+        ▼                            vitals source (every 60 s)
+  location gate                        → vitals gate
+        └─────────────────┬────────────────────┘
+                          ▼
+         context worker (every 5 s)
+           → life.context.changed {kind: location | vitals}
+           → durable queue → signed webhook
+                          ▼
+              ChatGPT Work task wakes up 🐾
+
+Events MCP backend (events/list · subscribe) ◀── private OpenAI Tunnel ──▶ ChatGPT</code></pre>
+      <figcaption data-lang-only="zh">两种信号 → 一种事件 → 一个 Work task。</figcaption>
+      <figcaption data-lang-only="en">Two signals → one event → one Work task.</figcaption>
+    </figure>
+  </header>
+
+  <section id="what">
+    <h2 data-lang-only="zh">主要功能</h2>
+    <h2 data-lang-only="en">What it does</h2>
+    <p data-lang-only="zh">大多数 AI 只知道你告诉它的事。haru-life-events 让 AI 自己<strong>注意到</strong>两种变化，不需要你打字：</p>
+    <p data-lang-only="en">Most AI agents only know what you tell them. haru-life-events lets the agent <strong>notice</strong> two kinds of change on its own, without you typing anything:</p>
+    <ul data-lang-only="zh">
+      <li>📍 <strong>位置</strong>：在 Telegram 共享实时位置 → 开始共享时、以及每移动 ≥ 2 km 时，AI 会收到一个模糊地名（例如「丸の内, 千代田区, 東京都」），AI 永远收不到坐标。</li>
+      <li>🩺 <strong>身体状态</strong>：PulsHealth（Apple Watch → iPhone）→ pulse-relay 检测到确认过的变化 → AI 收到 <code>movement_started</code>、<code>woke_up</code> 之类的触发，外加一个小摘要（最新心率、最近一小时步数…）。</li>
+    </ul>
+    <ul data-lang-only="en">
+      <li>📍 <strong>Location:</strong> you share live location in Telegram → when you start sharing, and every time you move ≥ 2 km, the agent gets a fuzzy place label like “丸の内, 千代田区, 東京都”. The agent never gets coordinates.</li>
+      <li>🩺 <strong>Vitals:</strong> PulsHealth (Apple Watch → iPhone) → pulse-relay detects confirmed changes → the agent gets triggers like <code>movement_started</code> or <code>woke_up</code>, plus a small snapshot (latest heart rate, steps in the last hour…).</li>
+    </ul>
+    <p data-lang-only="zh">两种变化都统一成<strong>一种</strong>事件 <code>life.context.changed</code>：AI 的 Work task 订阅一次，签名 webhook 就会把它叫醒。</p>
+    <p data-lang-only="en">Both arrive as <strong>one</strong> event type, <code>life.context.changed</code>, through MCP Events: the agent's Work task subscribes once, and a signed webhook wakes it up.</p>
+    <ul data-lang-only="zh">
+      <li><strong>context worker</strong> 是唯一会向外发送的进程：把每个来源事件包装成 <code>life.context.changed</code>，放进持久化队列。</li>
+      <li><strong>Events MCP backend</strong> 通过私有 tunnel 提供事件目录和订阅，自己从不发送事件。</li>
+      <li>健康数据库归 <strong>pulse-relay</strong> 所有；这个仓库从不打开它，只读取一个本机回环的 outbox。</li>
+    </ul>
+    <ul data-lang-only="en">
+      <li>The <strong>context worker</strong> is the only process that sends anything outward. It wraps each source event as <code>life.context.changed</code> and puts it in a durable queue.</li>
+      <li>The <strong>Events MCP backend</strong> serves the event catalog and subscriptions over a private tunnel. It never sends events itself.</li>
+      <li><strong>pulse-relay</strong> owns the health database; this repo never opens it, it only reads a loopback outbox.</li>
+    </ul>
+  </section>
+
+  <section id="events">
+    <h2 data-lang-only="zh">事件格式</h2>
+    <h2 data-lang-only="en">Event contract</h2>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>{"kind": "location",
+ "location": {"place": "丸の内, 千代田区, 東京都", "observed_at": "2026-10-22T09:12:00Z", "reason": "distance_2km"}}</code></pre></div>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>{"kind": "vitals",
+ "vitals": {"triggers": ["movement_started"], "observed_at": "2026-10-22T23:00:00Z",
+            "snapshot": {"heart_rate_bpm": {"value": 96, "observed_at": "2026-10-22T22:58:00Z"},
+                         "steps_last_hour": {"value": 900, "observed_at": "2026-10-22T23:00:00Z"}}}}</code></pre></div>
+    <div class="table-wrap" data-lang-only="zh"><table>
+      <thead><tr><th>字段</th><th>取值</th></tr></thead>
+      <tbody>
+        <tr><td>location <code>reason</code></td><td><code>sharing_started</code> · <code>distance_2km</code></td></tr>
+        <tr><td>vitals <code>triggers</code></td><td><code>movement_started</code> · <code>movement_settled</code> · <code>heart_rate_rose</code> · <code>heart_rate_fell</code> · <code>sleep_started</code> · <code>woke_up</code></td></tr>
+        <tr><td>vitals <code>snapshot</code></td><td>只有新鲜、有上限的摘要（心率、HRV、静息心率、最近一小时步数、今日活动能量、睡眠状态），每项都带自己的 <code>observed_at</code>；没有数据就省略，绝不显示成 0</td></tr>
+      </tbody>
+    </table></div>
+    <div class="table-wrap" data-lang-only="en"><table>
+      <thead><tr><th>Field</th><th>Values</th></tr></thead>
+      <tbody>
+        <tr><td>location <code>reason</code></td><td><code>sharing_started</code> · <code>distance_2km</code></td></tr>
+        <tr><td>vitals <code>triggers</code></td><td><code>movement_started</code> · <code>movement_settled</code> · <code>heart_rate_rose</code> · <code>heart_rate_fell</code> · <code>sleep_started</code> · <code>woke_up</code></td></tr>
+        <tr><td>vitals <code>snapshot</code></td><td>only fresh, bounded summaries (heart rate, HRV, resting HR, steps last hour, active energy today, sleep state), each with its own <code>observed_at</code>; missing = omitted, never 0</td></tr>
+      </tbody>
+    </table></div>
+    <p data-lang-only="zh">坐标、Telegram ID、原始健康时间序列和设备 ID 都不会发给 AI。坐标只会发给逆地理编码服务（先 HeartRails，再 GSI）用来查地名。</p>
+    <p data-lang-only="en">No coordinates, Telegram IDs, raw health time series or device IDs reach the agent. Coordinates go only to the reverse geocoder (HeartRails, then GSI) to look up the place label.</p>
+  </section>
+
+  <section id="location">
+    <h2 data-lang-only="zh">位置触发</h2>
+    <h2 data-lang-only="en">Location trigger</h2>
+    <ul data-lang-only="zh">
+      <li>第一次共享实时位置 → 一个事件。共享期间：和上一次<strong>发出</strong>的位置相距满 2 km 时再发一个（慢慢挪动不会刷屏）。</li>
+      <li>地名来自只覆盖日本的逆地理编码（先 HeartRails，再国土地理院 GSI）。查不到就不发，绝不编一个地名。</li>
+      <li>锚点位置存在一个 0600 文件里，重启不会重置；停止共享或限时共享到期时清除。</li>
+    </ul>
+    <ul data-lang-only="en">
+      <li>First live-location share → one event. While sharing: another event each time the distance from the last <strong>emitted</strong> position reaches 2 km (so slow drift doesn't spam).</li>
+      <li>Place labels come from a Japan-only reverse geocoder (HeartRails, then GSI). A failed lookup never invents a place.</li>
+      <li>The anchor position is kept in a 0600 file so restarts don't reset it, and cleared when sharing stops or a timed share expires.</li>
+    </ul>
+  </section>
+
+  <section id="vitals">
+    <h2 data-lang-only="zh">身体状态检测（pulse-relay v0.2 扩展）</h2>
+    <h2 data-lang-only="en">Vitals detection (pulse-relay v0.2 extension)</h2>
+    <p data-lang-only="zh">检测在 <a href="https://kohaku4yz.github.io/pulse-relay/" target="_blank" rel="noreferrer">pulse-relay</a> 的 Vitals 扩展里完成，紧挨着健康数据；这里只读取它的 outbox，并重新校验每个字段和时间戳。算法细节见 <a href="https://github.com/kohaku4yz/pulse-relay/blob/main/pulse_relay/extensions/vitals/ALGORITHM.md" target="_blank" rel="noreferrer">ALGORITHM.md</a>。</p>
+    <p data-lang-only="en">Detection runs in the Vitals extension of <a href="https://kohaku4yz.github.io/pulse-relay/" target="_blank" rel="noreferrer">pulse-relay</a>, next to the health data; this repo only reads its outbox and re-validates every field and timestamp. Algorithm details: <a href="https://github.com/kohaku4yz/pulse-relay/blob/main/pulse_relay/extensions/vitals/ALGORITHM.md" target="_blank" rel="noreferrer">ALGORITHM.md</a>.</p>
+    <div class="table-wrap" data-lang-only="zh"><table>
+      <thead><tr><th>信号</th><th>触发</th><th>规则（实验性）</th></tr></thead>
+      <tbody>
+        <tr><td>🚶 步数</td><td><code>movement_started</code> / <code>movement_settled</code></td><td>≥ 6 步/分 = 在动，≤ 1 = 安静；连续 2 个窗口才确认（一个 ≥ 30 分钟的窗口也够）</td></tr>
+        <tr><td>❤️ 心率</td><td><code>heart_rate_rose</code> / <code>heart_rate_fell</code></td><td>变化 ≥ max(15 bpm, 18%) 且连续 2 个窗口；单次尖峰忽略</td></tr>
+        <tr><td>😴 睡眠</td><td><code>sleep_started</code> / <code>woke_up</code></td><td>≥ 20 分钟真实睡眠阶段 / 主睡眠后 ≥ 30 分钟清醒</td></tr>
+      </tbody>
+    </table></div>
+    <div class="table-wrap" data-lang-only="en"><table>
+      <thead><tr><th>Signal</th><th>Triggers</th><th>Rule (experimental)</th></tr></thead>
+      <tbody>
+        <tr><td>🚶 Steps</td><td><code>movement_started</code> / <code>movement_settled</code></td><td>moving ≥ 6 steps/min, quiet ≤ 1; 2 windows in a row (one ≥ 30-min window is enough)</td></tr>
+        <tr><td>❤️ Heart rate</td><td><code>heart_rate_rose</code> / <code>heart_rate_fell</code></td><td>change ≥ max(15 bpm, 18%) for 2 windows in a row; single spikes ignored</td></tr>
+        <tr><td>😴 Sleep</td><td><code>sleep_started</code> / <code>woke_up</code></td><td>≥ 20 min of real sleep stages / ≥ 30 min awake after the main session</td></tr>
+      </tbody>
+    </table></div>
+    <ul data-lang-only="zh">
+      <li>缺数据 = <strong>未知</strong>，而不是「在休息」。唯一例外：被确认的睡眠覆盖的步数空档，早上从「安静」开始，这样醒来后第一次走路能被报告。用多晚真实数据回放（只看数量）：醒来后第一次走路被报告的次数明显变多。</li>
+      <li>10 分钟内的多个变化合并成一个事件。旧数据补传不会变成「刚刚」的新闻；回放不会重复发送。</li>
+    </ul>
+    <ul data-lang-only="en">
+      <li>Missing data means <strong>unknown</strong>, never “resting”. The one exception: a step gap covered by a confirmed sleep session starts the morning as quiet, so the first walk after waking counts. In a multi-night replay (counts only), the first walk after waking was reported far more often than before.</li>
+      <li>Changes within 10 minutes of each other become one event. Old uploads never become “just now” news; replays never repeat an event.</li>
+    </ul>
+  </section>
+
+  <section id="delivery">
+    <h2 data-lang-only="zh">投递与可靠性</h2>
+    <h2 data-lang-only="en">Delivery &amp; reliability</h2>
+    <ul data-lang-only="zh">
+      <li><strong>签名 webhook</strong>：HMAC-SHA256，带 <code>webhook-id</code> / <code>webhook-timestamp</code> / <code>webhook-signature</code> 头和 <code>whsec_</code> 密钥；发送任何事件前，先用 challenge 验证回调地址。</li>
+      <li><strong>重试</strong>：最多 6 次（30 秒起，每次翻倍，最长 1 小时）；每次重试前都重新检查订阅。</li>
+      <li><strong>事件时效</strong>：每个事件都有最长有效期（身体状态 90 分钟、位置 3 小时），入队时和发送前各检查一次。停机之后，过期事件直接丢弃，不会一口气全部送达 ⇒ 不会带来时机错误的突然关心 (x)</li>
+      <li><strong>出错就大声说</strong>：密钥错误或配置坏掉时，unit 在启动时就失败，而不是看起来「active」却什么都没送；路由切换和等待中的身体状态都会写进日志；统一路由关闭时 <code>context_cutover status</code> 返回 3，方便做健康检查。</li>
+    </ul>
+    <ul data-lang-only="en">
+      <li><strong>Signed webhooks</strong>: HMAC-SHA256 with <code>webhook-id</code> / <code>webhook-timestamp</code> / <code>webhook-signature</code> headers and a <code>whsec_</code> secret; the callback is verified with a challenge before any event is sent.</li>
+      <li><strong>Retries</strong>: up to 6 attempts with backoff (30 s, doubling, max 1 h); the subscription is re-checked before every attempt.</li>
+      <li><strong>No late bursts</strong>: each event has a maximum age (Vitals 90 min, location 3 h), checked when it enters the queue and again right before sending. After downtime, stale events are dropped instead of arriving all at once ⇒ no sudden worrying at the wrong moment (x)</li>
+      <li><strong>Loud failures</strong>: a wrong key or broken config fails the unit at start instead of looking “active” while delivering nothing; route changes and waiting Vitals are logged; <code>context_cutover status</code> exits 3 when the unified route is off, for health checks.</li>
+    </ul>
+  </section>
+
+  <section id="subscribe">
+    <h2 data-lang-only="zh">订阅 MCP Events</h2>
+    <h2 data-lang-only="en">Subscribing to MCP Events</h2>
+    <ul data-lang-only="zh">
+      <li>MCP Events 监听属于 ChatGPT Scheduled Tasks（事件触发型任务），消耗 Scheduled Tasks 配额：事件触发型任务仅限 Plus 及以上（Free/Go 无法创建），同时启用的任务 Plus 最多 5 个、Pro 15 个（<a href="https://help.openai.com/en/articles/10291617-scheduled-tasks-in-chatgpt" target="_blank" rel="noreferrer">Help Center</a>）⇒ 这也是我们把两个功能合并为一个事件的原因（只占一个 Scheduled Task 配额）。</li>
+      <li>MCP Events 目前只能在 Work 窗口中订阅，Chat 窗口无法订阅 MCP Events 类的 Scheduled Tasks。</li>
+      <li>需要先添加 Private MCP Tunnel（添加教程见 <a href="https://kohaku4yz.github.io/haru-vps-mcp/" target="_blank" rel="noreferrer">haru-vps-mcp</a>），也可以整合进已有 tunnel。</li>
+      <li>进入想要开启感知的 Work 窗口，发送类似「@Life Events hi &gt;v&lt;! 可以订阅 <code>life.context.changed</code> 事件吗」。GPT 会处理订阅并写下事件提示词，点开事件小标可以手动修改提示词（有时会写得太防御了 x，可以人为修改）。</li>
+    </ul>
+    <ul data-lang-only="en">
+      <li>An MCP Events subscription is an event-triggered ChatGPT Scheduled Task, so it uses your Scheduled Tasks quota: event-triggered tasks need Plus or above (Free/Go can't create them), and active tasks are capped at 5 on Plus and 15 on Pro (<a href="https://help.openai.com/en/articles/10291617-scheduled-tasks-in-chatgpt" target="_blank" rel="noreferrer">Help Center</a>) ⇒ this is also why we merged the two features into one event (it takes only one Scheduled Task slot).</li>
+      <li>For now, MCP Events can only be subscribed in a Work chat; a normal Chat can't subscribe to MCP Events-type Scheduled Tasks.</li>
+      <li>Add a Private MCP Tunnel first (<a href="https://kohaku4yz.github.io/haru-vps-mcp/" target="_blank" rel="noreferrer">setup guide: haru-vps-mcp</a>), or fold it into a tunnel you already have.</li>
+      <li>Open the Work chat where you want the awareness and send something like “@Life Events hi &gt;v&lt;! can you subscribe to the <code>life.context.changed</code> event?”. GPT handles the subscription and writes the event prompt. Tap the event chip to edit the prompt by hand (sometimes it writes it too defensively (x), so feel free to adjust it).</li>
+    </ul>
+  </section>
+
+  <section id="example">
+    <h2 data-lang-only="zh">运行示例</h2>
+    <h2 data-lang-only="en">Example run</h2>
+    <figure class="phone-shot">
+      <img src="assets/work-chat.jpg" alt="ChatGPT Work chat: two event-triggered messages from Haru, asking whether the user is walking home and whether they just got up" width="720" height="1518" loading="lazy" />
+      <figcaption data-lang-only="zh">真实运行：收到 <code>life.context.changed</code> 后，Haru 在 Work 窗口里主动来打招呼。</figcaption>
+      <figcaption data-lang-only="en">A real run: after a <code>life.context.changed</code> event, Haru checks in on its own in the Work chat.</figcaption>
+    </figure>
+  </section>
+
+  <section id="setup">
+    <h2 data-lang-only="zh">部署</h2>
+    <h2 data-lang-only="en">Setup</h2>
+    <p data-lang-only="zh">需要：一台有 systemd、git、Python ≥ 3.11（含 <code>venv</code>）的 Linux 主机；OpenAI Tunnel ID 和 runtime key，并把 <code>tunnel-client</code> 装在 <code>/opt/tunnel-client/tunnel-client</code>；身体状态需要同一台主机上的 pulse-relay ≥ 0.2（开启 Vitals 扩展）；位置需要一个你能改的 Telegram bot 轮询进程。</p>
+    <p data-lang-only="en">Needs: a Linux host with systemd, git and Python ≥ 3.11 with <code>venv</code>; an OpenAI Tunnel ID and runtime key, with <code>tunnel-client</code> at <code>/opt/tunnel-client/tunnel-client</code>; for Vitals, pulse-relay ≥ 0.2 with its Vitals extension on the same host; for location, a Telegram bot whose poller you control.</p>
+    <p data-lang-only="zh">unit 文件默认使用服务用户 <code>haru</code>、代码目录 <code>/opt/haru-life-events</code> 和 owner 标签 <code>my-agent</code>。想换 owner 标签的话，改 <code>deploy/systemd/*</code> 里的 <code>HARU_EVENTS_OWNER</code> 并在你的 clone 里 commit（<code>enable-vitals-source.sh</code> 会拒绝未提交的修改）。</p>
+    <p data-lang-only="en">The units expect the service user <code>haru</code>, the checkout in <code>/opt/haru-life-events</code> and the owner label <code>my-agent</code>. To use another owner label, change <code>HARU_EVENTS_OWNER</code> in <code>deploy/systemd/*</code> and commit it in your clone (<code>enable-vitals-source.sh</code> refuses uncommitted changes).</p>
+
+    <h3 data-lang-only="zh">1. 服务用户、代码、venv</h3>
+    <h3 data-lang-only="en">1. Service user, checkout, venv</h3>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>sudo useradd --system --create-home --home-dir /var/lib/haru-life-events haru
+sudo git clone https://github.com/kohaku4yz/haru-life-events /opt/haru-life-events
+sudo python3 -m venv /opt/haru-life-events/.venv
+sudo /opt/haru-life-events/.venv/bin/pip install -e '/opt/haru-life-events[server]'</code></pre></div>
+
+    <h3 data-lang-only="zh">2. 私有 Tunnel 配置</h3>
+    <h3 data-lang-only="en">2. Private Tunnel config</h3>
+    <p data-lang-only="zh">以服务用户身份运行。所有密钥都是 0600 文件，runtime key 先留空，这一步什么都不会启动。</p>
+    <p data-lang-only="en">Run as the service user. Every secret is a 0600 file, the runtime key stays empty, and nothing starts yet.</p>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>cd /opt/haru-life-events
+TUNNEL_ID=tunnel_...   # your Tunnel ID: "tunnel_" + 32 hex characters
+sudo -u haru -H .venv/bin/python -m haru_life_events.prepare_canary \
+  --tunnel-id "$TUNNEL_ID" --owner my-agent \
+  --config-dir /var/lib/haru-life-events/.config/haru-life-events \
+  --data-dir /var/lib/haru-life-events/.local/share/haru-life-events</code></pre></div>
+
+    <h3 data-lang-only="zh">3. Runtime key 和 Events MCP backend</h3>
+    <h3 data-lang-only="en">3. Runtime key and the Events MCP backend</h3>
+    <p data-lang-only="zh">key 在终端里隐藏输入，不会出现在命令行参数或日志里。</p>
+    <p data-lang-only="en">The key is typed into a hidden prompt, never passed as an argument or logged.</p>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>sudo bash deploy/owner-install-runtime-key.sh
+sudo bash deploy/systemd/owner-install-events-service.sh --install</code></pre></div>
+
+    <h3 data-lang-only="zh">4. context worker（位置和身体状态都需要）</h3>
+    <h3 data-lang-only="en">4. Context worker (needed for both location and Vitals)</h3>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>sudo install -d -o haru -g haru -m 0700 /var/lib/telegram-media
+sudo install -D -m 0644 deploy/systemd/haru-life-events-location-delivery.service.d/10-media-root.conf \
+  /etc/systemd/system/haru-life-events-location-delivery.service.d/10-media-root.conf
+sudo install -m 0644 deploy/systemd/haru-life-events-location-delivery.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now haru-life-events-location-delivery</code></pre></div>
+
+    <h3 data-lang-only="zh">5. 身体状态来源</h3>
+    <h3 data-lang-only="en">5. Vitals source</h3>
+    <p data-lang-only="zh">安装前会先检查 pulse-relay 的本机 outbox 能不能访问。</p>
+    <p data-lang-only="en">It checks pulse-relay's loopback outbox before installing.</p>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>sudo bash deploy/enable-vitals-source.sh --install</code></pre></div>
+
+    <h3 data-lang-only="zh">6. 位置（可选）</h3>
+    <h3 data-lang-only="en">6. Location (optional)</h3>
+    <p data-lang-only="zh">把 hook 接进你自己的 bot 轮询进程，可以参考 <code>deploy/telegram/media-location-optin.patch</code>：用 <code>build_hook_from_config(owner_id=&lt;你的 Telegram user id&gt;, root=&lt;media 目录&gt;, env=os.environ)</code> 建一次 hook，向 Telegram 额外请求 <code>edited_message</code>（实时位置是以编辑消息的形式到达的），然后对每个 update 调用 <code>observe_update()</code>。给轮询进程设置 <code>PYTHONPATH=/opt/haru-life-events</code> 和 <code>HARU_LOCATION_EVENTS_ENABLED=1</code>。轮询进程要以 <code>haru</code> 身份运行，和 context worker 是同一个用户：两者都会打开 media 目录（unit 里是 <code>/var/lib/telegram-media</code>）里的位置 gate（0600 的 SQLite 文件），属于别的用户的文件会被拒绝。</p>
+    <p data-lang-only="en">Wire the hook into your own bot's poller, using <code>deploy/telegram/media-location-optin.patch</code> as an example: build the hook once with <code>build_hook_from_config(owner_id=&lt;your Telegram user id&gt;, root=&lt;media root&gt;, env=os.environ)</code>, also ask Telegram for <code>edited_message</code> updates (live location arrives as edits), and call <code>observe_update()</code> for every update. Give the poller <code>PYTHONPATH=/opt/haru-life-events</code> and <code>HARU_LOCATION_EVENTS_ENABLED=1</code>. Run the poller as <code>haru</code>, the same user as the context worker: both open the location gate (a 0600 SQLite file in the media root, <code>/var/lib/telegram-media</code> in the units), and a file owned by another user is refused.</p>
+    <aside class="callout" data-lang-only="zh"><div class="icon">⚠️</div><div>同一个 bot 只能有一个轮询进程。hook 跑在你现有的轮询进程里，不要再启动第二个。</div></aside>
+    <aside class="callout" data-lang-only="en"><div class="icon">⚠️</div><div>One bot, one poller. The hook runs inside your existing poller; never start a second one for the same bot.</div></aside>
+
+    <h3 data-lang-only="zh">7. 在 ChatGPT 里订阅，再打开统一路由</h3>
+    <h3 data-lang-only="en">7. Subscribe in ChatGPT, then turn on the unified route</h3>
+    <p data-lang-only="zh">先按上面的「订阅 MCP Events」在 Work 窗口里订阅。<code>arm</code> 会要求你确认 Work task 已经绑定到这个订阅；全新安装时，在 ChatGPT 显示订阅成功之后设置这个确认标志即可：</p>
+    <p data-lang-only="en">First subscribe from a Work chat as described under “Subscribing to MCP Events”. <code>arm</code> asks you to confirm that the Work task is bound to this subscription; on a fresh install, set the flag once ChatGPT shows the subscription:</p>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>cd /opt/haru-life-events
+sudo -u haru -H env HARU_EVENTS_OWNER=my-agent HARU_CONTEXT_WORK_CANARY_RUN_VERIFIED=1 \
+  .venv/bin/python -m scripts.context_cutover arm
+sudo -u haru -H env HARU_EVENTS_OWNER=my-agent .venv/bin/python -m scripts.context_cutover status
+# expect UNIFIED_ROUTING_ACTIVE=true and UNIFIED_CONTEXT_SUBSCRIBERS=1 (exit code 3 = routing off)</code></pre></div>
+
+    <h3 data-lang-only="zh">环境变量</h3>
+    <h3 data-lang-only="en">Environment variables</h3>
+    <div class="table-wrap" data-lang-only="zh"><table>
+      <thead><tr><th>变量</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>HARU_EVENTS_OWNER</code></td><td>所有订阅的 owner（必填）</td></tr>
+        <tr><td><code>HARU_TELEGRAM_MEDIA_ROOT</code></td><td>Telegram 收件目录（必填，必须已存在）</td></tr>
+        <tr><td><code>HARU_LOCATION_WORKER_ENABLED=1</code></td><td>显式开启 context worker</td></tr>
+        <tr><td><code>HARU_LOCATION_EVENTS_ENABLED=1</code></td><td>显式开启位置共享的捕获（轮询进程里的 hook）</td></tr>
+        <tr><td><code>HARU_VITALS_SOURCE_ENABLED=1</code></td><td>显式开启身体状态来源</td></tr>
+        <tr><td><code>HARU_VITALS_HEALTH_URL</code></td><td>pulse-relay 的本机 outbox（默认 <code>http://127.0.0.1:8768/v1/health/vitals-outbox?limit=100</code>）</td></tr>
+      </tbody>
+    </table></div>
+    <div class="table-wrap" data-lang-only="en"><table>
+      <thead><tr><th>Variable</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>HARU_EVENTS_OWNER</code></td><td>owner of all subscriptions (required)</td></tr>
+        <tr><td><code>HARU_TELEGRAM_MEDIA_ROOT</code></td><td>the Telegram inbox directory (required, must exist)</td></tr>
+        <tr><td><code>HARU_LOCATION_WORKER_ENABLED=1</code></td><td>opt-in for the context worker</td></tr>
+        <tr><td><code>HARU_LOCATION_EVENTS_ENABLED=1</code></td><td>opt-in for capturing location shares (the hook in your poller)</td></tr>
+        <tr><td><code>HARU_VITALS_SOURCE_ENABLED=1</code></td><td>opt-in for the Vitals source</td></tr>
+        <tr><td><code>HARU_VITALS_HEALTH_URL</code></td><td>pulse-relay's loopback outbox (default <code>http://127.0.0.1:8768/v1/health/vitals-outbox?limit=100</code>)</td></tr>
+      </tbody>
+    </table></div>
+    <p data-lang-only="zh">所有设置在启动时检查，值不对就让 unit 直接失败（fail-closed）。</p>
+    <p data-lang-only="en">Every setting is checked at start; a bad value fails the unit (fail-closed).</p>
+  </section>
+
+  <section id="structure">
+    <h2 data-lang-only="zh">仓库结构</h2>
+    <h2 data-lang-only="en">Repository structure</h2>
+    <div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code>haru-life-events/
+├── haru_life_events/
+│   ├── event_bridge_v2.py       # MCP Events: catalog, subscriptions, callback verification, signing
+│   ├── event_delivery_v2.py     # durable delivery queue, bounded retries, age caps
+│   ├── life_events.py           # event gate: validation, atomic dedup, pending outbox
+│   ├── context_payload.py       # the life.context.changed union (location / vitals)
+│   ├── telegram_location.py     # first share or ≥ 2 km, fuzzy place labels
+│   ├── reverse_geocoder.py      # Japan-only: HeartRails, then GSI
+│   ├── telegram_media_hook.py   # opt-in hook for your bot's poller
+│   ├── puls_vitals_source.py    # reads + re-validates pulse-relay's outbox
+│   └── settings.py              # env settings, fail-closed
+├── scripts/
+│   ├── telegram_work_delivery.py   # context worker: the only webhook sender
+│   ├── vitals_source.py            # stages Vitals candidates
+│   ├── owner_tunnel_canary.py      # Events MCP backend + tunnel supervisor
+│   ├── context_cutover.py          # routing status / arm
+│   └── smoke_puls_work_pipeline.py # offline two-repo proof with pulse-relay
+├── deploy/           # systemd units, installers, poller patch example
+├── docs/ARCHITECTURE.md
+└── tests/            # 155 pytest cases, synthetic data only</code></pre></div>
+    <p data-lang-only="zh">约 3k 行 Python。</p>
+    <p data-lang-only="en">About 3k lines of Python.</p>
+  </section>
+
+  <section id="story">
+    <h2 data-lang-only="zh">幕后小故事：准备发布时发现的 bug</h2>
+    <h2 data-lang-only="en">Behind the scenes: the bug we found while preparing this</h2>
+    <ul data-lang-only="zh">
+      <li>发布前回放身体状态检测时，我们发现它已经<strong>悄悄瞎了好几天</strong>。</li>
+      <li>原因：健康数据库用的是 SQLite WAL 模式。即使只读，读取方也要在数据库旁边创建 <code>-shm</code>/<code>-wal</code> 文件，可检测器的沙箱只能写自己的目录。只有别的读取刚好留下这些文件时才读得到；每次上传又会把它们删掉。读取方把错误吞掉，返回了「没有数据」。</li>
+      <li>修复：数据目录对检测器可写，但数据库文件本身以只读方式挂载；读不了数据时，这一轮会大声失败，而不是假装没有数据。</li>
+      <li>教训：「没有数据」和「读不了」绝对不能长得一样。</li>
+    </ul>
+    <ul data-lang-only="en">
+      <li>While replaying the Vitals detector before publishing, we found it had been <strong>silently blind for days</strong>.</li>
+      <li>Cause: the health DB uses SQLite WAL mode. Even a read-only reader has to create the <code>-shm</code>/<code>-wal</code> files next to the DB, but the detector's sandbox could only write its own folder. Reads worked only while some other read had left those files behind; every upload deleted them. The reader caught the error and returned “no data”.</li>
+      <li>Fix: the data folder is writable for the detector, but the DB file itself is bind-mounted read-only; and an unreadable store now fails the run loudly instead of pretending there is no data.</li>
+      <li>Lesson: “no data” and “can't read” must never look the same.</li>
+    </ul>
+  </section>
+
+  <section id="notes">
+    <h2 data-lang-only="zh">注意事项</h2>
+    <h2 data-lang-only="en">Notes</h2>
+    <aside class="callout" data-lang-only="zh"><div class="icon">⚠️</div><div><strong>MCP Events 会过期，但没事。</strong>ChatGPT 会自行处理并刷新订阅（<a href="https://developers.openai.com/plugins/build/mcp-events" target="_blank" rel="noreferrer">MCP Events 文档</a>）。这个服务器的默认有效期是 7 天，最长 30 天。</div></aside>
+    <aside class="callout" data-lang-only="en"><div class="icon">⚠️</div><div><strong>MCP Events subscriptions expire, but that's fine.</strong> ChatGPT refreshes them on its own before they run out (<a href="https://developers.openai.com/plugins/build/mcp-events" target="_blank" rel="noreferrer">MCP Events docs</a>). This server's default lifetime is 7 days, at most 30.</div></aside>
+    <aside class="callout" data-lang-only="zh"><div class="icon">⚠️</div><div><strong>PulsHealth 什么时候同步由 iOS 决定。</strong>锁屏时 HealthKit 加密，夜间数据要等第一次解锁后才上传（所以 <code>sleep_started</code> 很少实时触发）。</div></aside>
+    <aside class="callout" data-lang-only="en"><div class="icon">⚠️</div><div><strong>iOS decides when PulsHealth syncs.</strong> HealthKit is locked while the phone is locked, so overnight Vitals arrive after the first unlock (<code>sleep_started</code> rarely fires live for this reason).</div></aside>
+    <p data-lang-only="zh">需要 pulse-relay ≥ v0.2 才有身体状态；位置功能可以单独使用。</p>
+    <p data-lang-only="en">Needs pulse-relay ≥ v0.2 for Vitals; location works on its own.</p>
+  </section>
+
+  <section id="license">
+    <h2 data-lang-only="zh">许可证</h2>
+    <h2 data-lang-only="en">License</h2>
+    <p>MIT © kohaku4yz</p>
+  </section>
+
+  <section id="references" class="references">
+    <h2 data-lang-only="zh">参考</h2>
+    <h2 data-lang-only="en">References</h2>
+    <ul class="resources">
+      <li><a href="https://developers.openai.com/plugins/build/mcp-events" target="_blank" rel="noreferrer">MCP Events docs (OpenAI)</a> · subscriptions, signed delivery, refresh</li>
+      <li><a href="https://help.openai.com/en/articles/10291617-scheduled-tasks-in-chatgpt" target="_blank" rel="noreferrer">Scheduled tasks in ChatGPT (Help Center)</a> · plans and task limits</li>
+      <li><a href="https://github.com/kohaku4yz/pulse-relay" target="_blank" rel="noreferrer">kohaku4yz/pulse-relay</a> · <a href="https://kohaku4yz.github.io/pulse-relay/" target="_blank" rel="noreferrer">Pulse Relay Docs</a> · the Vitals source</li>
+      <li><a href="https://kohaku4yz.github.io/haru-vps-mcp/" target="_blank" rel="noreferrer">Haru VPS MCP</a> · private MCP Tunnel setup</li>
+      <li><a href="https://github.com/PulsHealth/pulshealth" target="_blank" rel="noreferrer">PulsHealth/pulshealth</a> · the iOS app (Apache-2.0)</li>
+      <li><a href="https://geoapi.heartrails.com/" target="_blank" rel="noreferrer">HeartRails Geo API</a> · <a href="https://maps.gsi.go.jp/" target="_blank" rel="noreferrer">GSI (国土地理院)</a> · reverse geocoding</li>
+    </ul>
+  </section>
+
+  <footer>Haru Life Events · two signals, one event, one gentle nudge. 🐾</footer>
+</main>
+
+<script>
+const languageMeta={
+  zh:{htmlLang:'zh-CN',title:'Haru Life Events — 部署指南',description:'Haru Life Events：基于 MCP Events 的生活感知。地点移动或身体状态变化（开始走路、醒来、心率变化）时，用一个 life.context.changed 事件叫醒你的 AI。'},
+  en:{htmlLang:'en',title:'Haru Life Events — Setup guide',description:'Haru Life Events: life awareness on MCP Events. When you move somewhere or your body changes state (walking, waking up, heart rate), one life.context.changed event wakes your AI.'}
+};
+function applyLanguage(lang){
+  if(!languageMeta[lang]) lang='zh';
+  const meta=languageMeta[lang];
+  document.documentElement.dataset.uiLang=lang;
+  document.documentElement.lang=meta.htmlLang;
+  document.title=meta.title;
+  document.querySelector('meta[name="description"]').setAttribute('content',meta.description);
+  document.querySelector('.topline').setAttribute('aria-label',lang==='zh'?'面包屑':'Breadcrumb');
+  document.querySelector('.toc-dock').setAttribute('aria-label',lang==='zh'?'页面目录':'Table of contents');
+  document.querySelector('.toc-rail').setAttribute('aria-label',lang==='zh'?'目录快速导航':'Quick section navigation');
+  document.querySelector('.toc-panel').setAttribute('aria-label',lang==='zh'?'页面目录展开':'Expanded table of contents');
+  document.querySelectorAll('[data-label-zh][data-label-en]').forEach(a=>{
+    const label=a.dataset[lang==='zh'?'labelZh':'labelEn'];
+    a.setAttribute('aria-label',label);
+    a.setAttribute('title',label);
+    if(a.closest('.toc-panel')) a.textContent=label;
+  });
+  document.querySelectorAll('[data-lang-set]').forEach(btn=>{
+    const active=btn.dataset.langSet===lang;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-pressed',String(active));
+  });
+  try{localStorage.setItem('haru-life-events-doc-lang',lang)}catch{}
+}
+document.querySelectorAll('[data-lang-set]').forEach(btn=>btn.addEventListener('click',()=>applyLanguage(btn.dataset.langSet)));
+let initialLanguage='zh';
+try{initialLanguage=localStorage.getItem('haru-life-events-doc-lang')||'zh'}catch{}
+const forced=new URLSearchParams(location.search).get('lang');
+if(forced) initialLanguage=forced;
+applyLanguage(initialLanguage);
+
+document.querySelectorAll('.copy').forEach(btn=>{
+  btn.addEventListener('click',async()=>{
+    const text=btn.parentElement.querySelector('pre').innerText;
+    try{await navigator.clipboard.writeText(text);btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',1100)}
+    catch{btn.textContent='Select'}
+  });
+});
+const allLinks=[...document.querySelectorAll('.toc-rail a, .toc-panel a')];
+const ids=[...new Set(allLinks.map(a=>a.getAttribute('href')).filter(Boolean))];
+const sections=ids.map(id=>document.querySelector(id)).filter(Boolean);
+const setActive=id=>allLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')===id));
+const io=new IntersectionObserver(entries=>{
+  const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top);
+  if(visible[0]) setActive('#'+visible[0].target.id);
+},{rootMargin:'-15% 0px -72% 0px',threshold:[0,.1,.5]});
+sections.forEach(s=>io.observe(s));
+setActive('#what');
+</script>
+</body>
+</html>

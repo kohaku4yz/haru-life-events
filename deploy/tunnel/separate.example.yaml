@@ -1,0 +1,26 @@
+# SAMPLE ONLY — never reuse another MCP server's tunnel ID here.
+# Obtain a distinct, user-approved Tunnel ID from OpenAI Tunnels management.
+# Supply the runtime API key via a private environment-file reference.
+config_version: 1
+control_plane:
+  base_url: "https://api.openai.com"
+  tunnel_id: "tunnel_REPLACE_WITH_SEPARATE_EVENTS_TUNNEL_ID"
+  api_key: "env:CONTROL_PLANE_API_KEY"
+health:
+  listen_addr: "127.0.0.1:0"
+admin_ui:
+  open_browser: false
+log:
+  level: info
+  format: json
+mcp:
+  server_urls:
+    - channel: main
+      url: "http://127.0.0.1:8794/mcp"
+  # Local-only backend bearer injected by tunnel-client. These files contain
+  # the full 'Bearer <private-key>' header value, not just the key.
+  # Never substitute your OpenAI tunnel control-plane runtime key here.
+  extra_headers:
+    Authorization: "file:/PRIVATE/PATH/backend-auth-header.txt"
+  discovery_extra_headers:
+    Authorization: "file:/PRIVATE/PATH/backend-auth-header.txt"

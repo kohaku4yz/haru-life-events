@@ -1,0 +1,26 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install isolated package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[server,test]'
+      - name: Compile and test
+        run: |
+          python -m compileall -q haru_life_events scripts tests
+          python -m pytest -q
+      - name: Two-repo smoke test (pulse-relay v0.2.0)
+        run: |
+          pip install "pulse-relay @ git+https://github.com/kohaku4yz/pulse-relay@v0.2.0"
+          PYTHONPATH=. python scripts/smoke_puls_work_pipeline.py
+      - name: Check trailing whitespace
+        run: git diff --check

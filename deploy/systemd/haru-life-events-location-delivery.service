@@ -1,0 +1,28 @@
+# Context worker: the only process that sends webhooks. It wraps location and
+# staged Vitals as life.context.changed and delivers them to the Work task.
+# HARU_TELEGRAM_MEDIA_ROOT comes from the drop-in in
+# haru-life-events-location-delivery.service.d/ (install it first).
+[Unit]
+Description=Owner-controlled location-to-Work delivery (Haru Life Events)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=haru
+Group=haru
+Type=simple
+WorkingDirectory=/opt/haru-life-events
+Environment=HOME=/var/lib/haru-life-events
+Environment=PYTHONPATH=/opt/haru-life-events
+Environment=HARU_EVENTS_OWNER=my-agent
+Environment=HARU_LOCATION_WORKER_ENABLED=1
+ExecStart=/opt/haru-life-events/.venv/bin/python -m scripts.telegram_work_delivery
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/telegram-media /var/lib/haru-life-events/.local/share/haru-life-events
+
+[Install]
+WantedBy=multi-user.target

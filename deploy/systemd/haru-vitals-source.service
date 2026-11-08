@@ -1,0 +1,32 @@
+# PulsHealth Vitals source: stages confirmed changes into vitals-gate.sqlite3.
+# Holds no Work credentials; the context worker delivers staged Vitals to Work.
+[Unit]
+Description=Haru PulsHealth Vitals source (stages for the context worker)
+After=network-online.target pulse-relay.service
+Wants=pulse-relay.service
+
+[Service]
+Type=simple
+User=haru
+Group=haru
+WorkingDirectory=/opt/haru-life-events
+ExecStart=/opt/haru-life-events/.venv/bin/python -m scripts.vitals_source
+Environment=HOME=/var/lib/haru-life-events
+Environment=PYTHONPATH=/opt/haru-life-events
+Environment=HARU_EVENTS_OWNER=my-agent
+Environment=HARU_VITALS_SOURCE_ENABLED=1
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/haru-life-events/.local/share/haru-life-events
+IPAddressAllow=127.0.0.0/8
+IPAddressAllow=::1/128
+IPAddressDeny=any
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
